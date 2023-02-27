@@ -251,10 +251,13 @@ void createCanvas(){
 }
 
 
-const int horizonCanvasHeight = 240;
-const int horizonCanvasWidth = 240;
+const int horizonCanvasHeight = 260;
+const int horizonCanvasWidth = 260;
 const int horizonCanvasHalfHeight = horizonCanvasHeight/2;
 const int horizonCanvasHalfWidth = horizonCanvasWidth/2;
+lv_color_t updateHorizonC0;
+lv_color_t updateHorizonC1;
+lv_color_t updateHorizonC2;
 static lv_color_t horizonCanvasBuf[LV_CANVAS_BUF_SIZE_INDEXED_2BIT(horizonCanvasWidth, horizonCanvasHeight)];
 lv_obj_t *horizonCanvas;
 lv_obj_t *horizon;
@@ -275,52 +278,48 @@ void createHorizon(){
   lv_canvas_set_palette(horizonCanvas, 1, CYAN);
   lv_canvas_set_palette(horizonCanvas, 2, BROWN);
   lv_canvas_set_palette(horizonCanvas, 3, WHITE);
-
-  lv_color_t c0;
-  c0.full = 1;
-  lv_color_t c1;
-  c1.full = 2;
-  lv_canvas_fill_bg(horizonCanvas,c0,LV_OPA_COVER);
+  updateHorizonC0.full = 1;
+  updateHorizonC1.full = 2;
+  updateHorizonC2.full = 3;
+  lv_canvas_fill_bg(horizonCanvas,updateHorizonC0,LV_OPA_COVER);
 
   lv_draw_rect_dsc_init(&horizonDsc);
-  horizonDsc.bg_color = c1;
+  horizonDsc.bg_color = updateHorizonC1;
   
   calculatePolygonPoints(30,horizonPoints);
-  draw_polygon(horizonCanvas,horizonPoints,horizonPointsCount,c1);
+  draw_polygon(horizonCanvas,horizonPoints,horizonPointsCount,updateHorizonC1);
 }
 
+const lv_point_t updateHorizonCenter = {horizonCanvasHalfWidth,horizonCanvasHalfHeight};
+const int updateHorizonCenterSizes[11] = {250,30,50,30,100,30,50,30,100,30,50};
+bool updateHorizonOdd = false;
+lv_point_t updateHorizonStartPoint;
+lv_point_t updateHorizonEndPoint;
 void updateHorizon(int angle){
-  lv_color_t c0;
-  c0.full = 1;
-  lv_color_t c1;
-  c1.full = 2;
-  lv_color_t c2;
-  c2.full = 3;
-  lv_canvas_fill_bg(horizonCanvas, c0, LV_OPA_COVER);
-  calculatePolygonPoints(angle,horizonPoints);
-  draw_polygon(horizonCanvas,horizonPoints,horizonPointsCount,c1);
+  if(updateHorizonOdd == false){
+    calculatePolygonPoints(angle,horizonPoints);
+    updateHorizonOdd = true;
+  }else{
+    lv_canvas_fill_bg(horizonCanvas, updateHorizonC0, LV_OPA_COVER);
+    draw_polygon(horizonCanvas,horizonPoints,horizonPointsCount,updateHorizonC1);
+    get_line_points(updateHorizonCenter,angle,0,updateHorizonCenterSizes[0],&updateHorizonStartPoint,&updateHorizonEndPoint);
+    draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
 
-
-  lv_point_t center = {horizonCanvasHalfWidth,horizonCanvasHalfHeight};
-  lv_point_t start_point;
-  lv_point_t end_point;
-  lv_point_t start_pointB;
-  lv_point_t end_pointB;
-
-  const int sizes[11] = {220,30,50,30,100,30,50,30,100,30,50};
-  for(int i=0;i<11;i++){
-    get_line_points(center,angle,12*i,sizes[i],&start_point,&end_point);
-    if(i%4==0){ 
-      draw_line(horizonCanvas,start_point,end_point,c2);
-    }else{
-      draw_line_one(horizonCanvas,start_point,end_point,c2);
-    }
-    get_line_points(center,angle+180,12*i,sizes[i],&start_point,&end_point);
-    if(i%4==0){ 
-      draw_line(horizonCanvas,start_point,end_point,c2);
-    }else{
-      draw_line_one(horizonCanvas,start_point,end_point,c2);
-    }
+    // for(int i=0;i<11;i++){
+    //   get_line_points(updateHorizonCenter,angle,12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
+    //   if(i%4==0){ 
+    //     draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+    //   }else{
+    //     draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+    //   }
+    //   get_line_points(updateHorizonCenter,angle+180,12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
+    //   if(i>0 && i%4==0){ 
+    //     draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+    //   }else{
+    //     draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+    //   }
+    // }
+    updateHorizonOdd = false;
   }
 }
 void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, lv_color_t color) {
@@ -356,7 +355,7 @@ void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, l
       int16_t i, j;
       bool inside = false;
       for (i = 0, j = point_count - 1; i < point_count; j = i++) {
-        if (((points[i].y > y) != (points[j].y > y)) &&
+        if (((points[i].y >= y) != (points[j].y >= y)) &&
             (x < (points[j].x - points[i].x) * (y - points[i].y) / (points[j].y - points[i].y) + points[i].x)) {
           inside = !inside;
         }
@@ -370,14 +369,14 @@ void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, l
 
 void calculatePolygonPoints(int angle, lv_point_t *points) {
   angle *= -1;
-  float radians = angle * M_PI / 180; // Conversione dell'angolo da gradi a radianti
+  float radians = angle * M_PI / 180.0; // Conversione dell'angolo da gradi a radianti
   float sinValue = sin(radians);
   float cosValue = cos(radians);
   // Calcolo le coordinate dei punti del poligono in base all'angolo
   points[0].x = 0;
-  points[0].y = horizonCanvasHalfHeight + horizonCanvasHalfWidth * sinValue;
+  points[0].y = horizonCanvasHalfHeight + ceil(horizonCanvasHalfWidth * sinValue);
   points[1].x = horizonCanvasWidth;
-  points[1].y = horizonCanvasHalfHeight - horizonCanvasHalfWidth * sinValue;
+  points[1].y = horizonCanvasHalfHeight - floor(horizonCanvasHalfWidth * sinValue);
   points[2].x = horizonCanvasWidth;
   points[2].y = horizonCanvasHeight;
   points[3].x = 0;
@@ -758,12 +757,12 @@ void setup() {
   createCenterLine();
 }
 
-int top = 0;
-int direction = 1;
-const int bottomLimit = -6000;
-const int topLimit = 6000;
+int top = -30;
+int direction = 0;
+const int bottomLimit = -30;
+const int topLimit = 30;
 int lastmillis = 0;
-const int maxmillis = 50;
+const int maxmillis = 10;
 const int second = 100;
 
 void loop() {
@@ -776,11 +775,11 @@ void loop() {
   // lv_obj_set_pos(horizon,0,LCD_V_RES/2+top);
   if(deltaTime>maxmillis){
     // lv_obj_set_style_transform_angle(horizon,top,0);
-    updateHorizon(int(top/200));
+    updateHorizon(int(top));
     lastmillis = millis();
+    top+=direction;
+    if(top > topLimit || top < bottomLimit) direction *= -1;
   }
-  top+=direction;
-  if(top > topLimit || top < bottomLimit) direction *= -1;
   lv_timer_handler();
 }
 
