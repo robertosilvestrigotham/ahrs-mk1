@@ -1,3 +1,6 @@
+# 1 "/var/folders/fj/ygptvx9j72ncw5hl88dx7bzm0000gn/T/tmppt2927a8"
+#include <Arduino.h>
+# 1 "/Users/robertosilvestri/Downloads/ahrs-mk1/src/lv_benchmark.ino"
 #include "Wire.h"
 #include "XL9535_driver.h"
 #include "esp_lcd_panel_io.h"
@@ -18,20 +21,20 @@ const lv_color_t GREYTEXT = lv_color_hex(0x888888);
 const lv_color_t YELLOW = lv_color_hex(0xE7E600);
 const lv_color_t GREEN = lv_color_hex(0x00FF00);
 
-#define TOUCH_MODULE_CST820
-// #define TOUCH_MODULE_FT3267
+#define TOUCH_MODULE_CST820 
+
 
 #if defined(TOUCH_MODULE_FT3267)
 #include "ft3267.h"
 #elif defined(TOUCH_MODULE_CST820)
-#define TOUCH_MODULES_CST_SELF
+#define TOUCH_MODULES_CST_SELF 
 #include "TouchLib.h"
 #endif
 
 typedef struct {
   uint8_t cmd;
   uint8_t data[16];
-  uint8_t databytes; // No of data in data; bit 7 = delay after set; 0xFF = end of cmds.
+  uint8_t databytes;
 } lcd_init_cmd_t;
 
 DRAM_ATTR static const lcd_init_cmd_t st_init_cmds[] = {
@@ -40,7 +43,7 @@ DRAM_ATTR static const lcd_init_cmd_t st_init_cmds[] = {
     {0xC1, {0x0b, 0x02}, 0x02},
     {0xC2, {0x07, 0x02}, 0x02},
     {0xCC, {0x10}, 0x01},
-    {0xCD, {0x08}, 0x01}, // 用565时屏蔽    666打开
+    {0xCD, {0x08}, 0x01},
     {0xb0, {0x00, 0x11, 0x16, 0x0e, 0x11, 0x06, 0x05, 0x09, 0x08, 0x21, 0x06, 0x13, 0x10, 0x29, 0x31, 0x18}, 0x10},
     {0xb1, {0x00, 0x11, 0x16, 0x0e, 0x11, 0x07, 0x05, 0x09, 0x09, 0x21, 0x05, 0x13, 0x11, 0x2a, 0x31, 0x18}, 0x10},
     {0xFF, {0x77, 0x01, 0x00, 0x00, 0x11}, 0x05},
@@ -73,9 +76,9 @@ DRAM_ATTR static const lcd_init_cmd_t st_init_cmds[] = {
     {0x36, {0x08}, 0x01},
     {0x3a, {0x66}, 0x01},
     {0x11, {0x00}, 0x80},
-    // {0xFF, {0x77, 0x01, 0x00, 0x00, 0x12}, 0x05},
-    // {0xd1, {0x81}, 0x01},
-    // {0xd2, {0x06}, 0x01},
+
+
+
     {0x29, {0x00}, 0x80},
     {0, {0}, 0xff}};
 
@@ -88,8 +91,31 @@ bool touch_pin_get_int = false;
 void tft_init(void);
 void lcd_cmd(const uint8_t cmd);
 void lcd_data(const uint8_t *data, int len);
-
-
+static void example_lvgl_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map);
+static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
+void preSetup();
+void createCanvas();
+void createHorizon();
+void updateHorizon(int angle);
+void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, lv_color_t color);
+void calculatePolygonPoints(int angle, lv_point_t *points);
+void draw_line(lv_obj_t *canvas, lv_point_t point_a, lv_point_t point_b, lv_color_t color);
+void draw_line_one(lv_obj_t *canvas, lv_point_t point_a, lv_point_t point_b, lv_color_t color);
+void get_line_points(lv_point_t center, int16_t angle_degrees, int16_t distance, int16_t width, lv_point_t *start_point, lv_point_t *end_point);
+void createHDG();
+void createQNH();
+void createIAS();
+void createCenterLine();
+void createVerticalSpeed();
+void createGS();
+void createAltitude();
+void createIASGauge();
+void createAltGauge();
+void drawArc(lv_obj_t *canvas,bool inverted);
+void setup();
+void loop();
+void lcd_send_data(uint8_t data);
+#line 93 "/Users/robertosilvestri/Downloads/ahrs-mk1/src/lv_benchmark.ino"
 static void example_lvgl_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map) {
   esp_lcd_panel_handle_t panel_handle = (esp_lcd_panel_handle_t)drv->user_data;
   int offsetx1 = area->x1;
@@ -124,10 +150,10 @@ static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
 }
 
 void preSetup(){
-  static lv_disp_draw_buf_t disp_buf; // contains internal graphic buffer(s) called draw buffer(s)
-  static lv_disp_drv_t disp_drv;      // contains callback functions
+  static lv_disp_draw_buf_t disp_buf;
+  static lv_disp_drv_t disp_drv;
   static lv_indev_drv_t indev_drv;
-  // put your setup code here, to run once:
+
   pinMode(BAT_VOLT_PIN, ANALOG);
 
   Wire.begin(IIC_SDA_PIN, IIC_SCL_PIN, (uint32_t)400000);
@@ -144,7 +170,7 @@ void preSetup(){
   xl.digitalWrite(TP_RES_PIN, 0);
   delay(200);
   xl.digitalWrite(TP_RES_PIN, 1);
-  
+
 #if defined(TOUCH_MODULE_FT3267)
   ft3267_init(Wire);
 #elif defined(TOUCH_MODULE_CST820)
@@ -159,7 +185,7 @@ void preSetup(){
               .pclk_hz = EXAMPLE_LCD_PIXEL_CLOCK_HZ,
               .h_res = LCD_H_RES,
               .v_res = LCD_V_RES,
-              // The following parameters should refer to LCD spec
+
               .hsync_pulse_width = 1,
               .hsync_back_porch = 30,
               .hsync_front_porch = 50,
@@ -171,7 +197,7 @@ void preSetup(){
                       .pclk_active_neg = 1,
                   },
           },
-      .data_width = 16, // RGB565 in parallel mode, thus 16bit in width
+      .data_width = 16,
       .psram_trans_align = 64,
       .hsync_gpio_num = EXAMPLE_PIN_NUM_HSYNC,
       .vsync_gpio_num = EXAMPLE_PIN_NUM_VSYNC,
@@ -179,7 +205,7 @@ void preSetup(){
       .pclk_gpio_num = EXAMPLE_PIN_NUM_PCLK,
       .data_gpio_nums =
           {
-              // EXAMPLE_PIN_NUM_DATA0,
+
               EXAMPLE_PIN_NUM_DATA13,
               EXAMPLE_PIN_NUM_DATA14,
               EXAMPLE_PIN_NUM_DATA15,
@@ -192,7 +218,7 @@ void preSetup(){
               EXAMPLE_PIN_NUM_DATA9,
               EXAMPLE_PIN_NUM_DATA10,
               EXAMPLE_PIN_NUM_DATA11,
-              // EXAMPLE_PIN_NUM_DATA12,
+
 
               EXAMPLE_PIN_NUM_DATA1,
               EXAMPLE_PIN_NUM_DATA2,
@@ -205,7 +231,7 @@ void preSetup(){
       .user_ctx = NULL,
       .flags =
           {
-              .fb_in_psram = 1, // allocate frame buffer in PSRAM
+              .fb_in_psram = 1,
           },
   };
   ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
@@ -213,7 +239,7 @@ void preSetup(){
   ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
 
   lv_init();
-  // alloc draw buffers used by LVGL from PSRAM
+
   lv_color_t *buf1 =
       (lv_color_t *)heap_caps_malloc(LCD_H_RES * LCD_V_RES * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
   assert(buf1);
@@ -284,7 +310,7 @@ void createHorizon(){
 
   lv_draw_rect_dsc_init(&horizonDsc);
   horizonDsc.bg_color = c1;
-  
+
   calculatePolygonPoints(30,horizonPoints);
   draw_polygon(horizonCanvas,horizonPoints,horizonPointsCount,c1);
 }
@@ -310,13 +336,13 @@ void updateHorizon(int angle){
   const int sizes[11] = {220,30,50,30,100,30,50,30,100,30,50};
   for(int i=0;i<11;i++){
     get_line_points(center,angle,12*i,sizes[i],&start_point,&end_point);
-    if(i%4==0){ 
+    if(i%4==0){
       draw_line(horizonCanvas,start_point,end_point,c2);
     }else{
       draw_line_one(horizonCanvas,start_point,end_point,c2);
     }
     get_line_points(center,angle+180,12*i,sizes[i],&start_point,&end_point);
-    if(i%4==0){ 
+    if(i%4==0){
       draw_line(horizonCanvas,start_point,end_point,c2);
     }else{
       draw_line_one(horizonCanvas,start_point,end_point,c2);
@@ -330,7 +356,7 @@ void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, l
   uint16_t canvas_width = dsc->header.w;
   uint16_t canvas_height = dsc->header.h;
 
-  // Find the bounding box of the polygon
+
   int16_t min_x = canvas_width;
   int16_t min_y = canvas_height;
   int16_t max_x = 0;
@@ -350,7 +376,7 @@ void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, l
     }
   }
 
-  // Iterate over every pixel in the bounding box and check if it's inside the polygon
+
   for (int16_t x = min_x; x <= max_x; x++) {
     for (int16_t y = min_y; y <= max_y; y++) {
       int16_t i, j;
@@ -370,10 +396,10 @@ void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, l
 
 void calculatePolygonPoints(int angle, lv_point_t *points) {
   angle *= -1;
-  float radians = angle * M_PI / 180; // Conversione dell'angolo da gradi a radianti
+  float radians = angle * M_PI / 180;
   float sinValue = sin(radians);
   float cosValue = cos(radians);
-  // Calcolo le coordinate dei punti del poligono in base all'angolo
+
   points[0].x = 0;
   points[0].y = horizonCanvasHalfHeight + horizonCanvasHalfWidth * sinValue;
   points[1].x = horizonCanvasWidth;
@@ -494,7 +520,7 @@ void createHDG(){
   hdgObj = lv_obj_create(canvas);
   lv_obj_remove_style_all(hdgObj);
   lv_obj_set_size(hdgObj,386,77);
-  lv_obj_set_align(hdgObj,LV_ALIGN_BOTTOM_MID);  
+  lv_obj_set_align(hdgObj,LV_ALIGN_BOTTOM_MID);
   lv_obj_set_style_bg_opa(hdgObj,LV_OPA_COVER,0);
   lv_obj_set_style_bg_color(hdgObj,BKG,0);
 
@@ -570,7 +596,7 @@ void createIAS(){
   lv_obj_remove_style_all(iasObj);
   lv_obj_set_size(iasObj,100,60);
   lv_obj_set_pos(iasObj,0,210);
-  
+
     lv_draw_rect_dsc_t rect_dsc;
     lv_draw_rect_dsc_init(&rect_dsc);
     rect_dsc.radius = 0;
@@ -644,7 +670,7 @@ void createVerticalSpeed(){
   vsObj = lv_obj_create(canvas);
   lv_obj_remove_style_all(vsObj);
   lv_obj_set_size(vsObj,90,80);
-  lv_obj_set_pos(vsObj,348,20);  
+  lv_obj_set_pos(vsObj,348,20);
   lv_obj_set_style_bg_opa(vsObj,LV_OPA_COVER,0);
   lv_obj_set_style_bg_color(vsObj,BLACK,0);
 
@@ -736,7 +762,7 @@ void drawArc(lv_obj_t *canvas,bool inverted) {
 void setup() {
   preSetup();
 
-  // lv_demo_benchmark();
+
   createCanvas();
 
   createHorizon();
@@ -769,13 +795,13 @@ const int second = 100;
 void loop() {
   const long actual = millis();
   const int deltaTime = actual-lastmillis;
-  // lastmillis = millis();
-  // const int fps = int(second/deltaTime);
-  // Serial.println(fps);
-  // put your main code here, to run repeatedly:
-  // lv_obj_set_pos(horizon,0,LCD_V_RES/2+top);
+
+
+
+
+
   if(deltaTime>maxmillis){
-    // lv_obj_set_style_transform_angle(horizon,top,0);
+
     updateHorizon(int(top/200));
     lastmillis = millis();
   }
@@ -810,7 +836,7 @@ void lcd_cmd(const uint8_t cmd) {
 void lcd_data(const uint8_t *data, int len) {
   uint32_t i = 0;
   if (len == 0)
-    return; // no need to send anything
+    return;
   do {
     xl.digitalWrite(LCD_CS_PIN, 0);
     xl.digitalWrite(LCD_SDA_PIN, 1);
@@ -827,7 +853,7 @@ void tft_init(void) {
   xl.digitalWrite(LCD_SDA_PIN, 1);
   xl.digitalWrite(LCD_CLK_PIN, 1);
 
-  // Reset the display
+
   xl.digitalWrite(LCD_RST_PIN, 1);
   vTaskDelay(200 / portTICK_PERIOD_MS);
   xl.digitalWrite(LCD_RST_PIN, 0);
