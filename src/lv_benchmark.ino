@@ -92,10 +92,10 @@ void lcd_data(const uint8_t *data, int len);
 
 static void example_lvgl_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map) {
   esp_lcd_panel_handle_t panel_handle = (esp_lcd_panel_handle_t)drv->user_data;
-  int offsetx1 = area->x1;
-  int offsetx2 = area->x2;
-  int offsety1 = area->y1;
-  int offsety2 = area->y2;
+  int16_t offsetx1 = area->x1;
+  int16_t offsetx2 = area->x2;
+  int16_t offsety1 = area->y1;
+  int16_t offsety2 = area->y2;
   esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
   lv_disp_flush_ready(drv);
 }
@@ -251,10 +251,10 @@ void createCanvas(){
 }
 
 
-const int horizonCanvasHeight = 330;
-const int horizonCanvasWidth = 280;
-const int horizonCanvasHalfHeight = horizonCanvasHeight/2;
-const int horizonCanvasHalfWidth = horizonCanvasWidth/2;
+const short int horizonCanvasHeight = 330;
+const short int horizonCanvasWidth = 280;
+const short int horizonCanvasHalfHeight = horizonCanvasHeight/2;
+const short int horizonCanvasHalfWidth = horizonCanvasWidth/2;
 lv_color_t updateHorizonC0;
 lv_color_t updateHorizonC1;
 lv_color_t updateHorizonC2;
@@ -263,7 +263,7 @@ lv_obj_t *horizonCanvas;
 lv_obj_t *horizon;
 lv_draw_rect_dsc_t horizonDsc;
 lv_point_t horizonPoints[4];
-uint32_t horizonPointsCount=4;
+const int8_t horizonPointsCount=4;
 void createHorizon(){
   horizon = lv_obj_create(canvas);
   lv_obj_remove_style_all(horizon);
@@ -291,14 +291,14 @@ void createHorizon(){
 }
 
 const lv_point_t updateHorizonCenter = {horizonCanvasHalfWidth,horizonCanvasHalfHeight};
-const int updateHorizonCenterSizes[11] = {250,30,50,30,100,30,50,30,100,30,50};
+const short int updateHorizonCenterSizes[11] = {250,30,50,30,100,30,50,30,100,30,50};
 lv_point_t updateHorizonStartPoint;
 lv_point_t updateHorizonEndPoint;
 void updateHorizon(int angle,int pitch){
     calculatePolygonPoints(angle,pitch,horizonPoints);
     lv_canvas_fill_bg(horizonCanvas, updateHorizonC0, LV_OPA_COVER);
     draw_polygon(horizonCanvas,horizonPoints,horizonPointsCount,updateHorizonC1);
-    for(int i=0;i<11;i++){
+    for(int8_t i=0;i<11;i++){
       get_line_points(updateHorizonCenter,angle,pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
       if(i%4==0){ 
         draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
@@ -317,6 +317,7 @@ void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, l
   LV_ASSERT_OBJ(canvas, MY_CLASS);
   lv_img_dsc_t *dsc = lv_canvas_get_img(canvas);
 
+  // Find the bounding box of th
   uint16_t canvas_width = dsc->header.w;
   uint16_t canvas_height = dsc->header.h;
 
@@ -357,10 +358,10 @@ void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, l
     }
   }
 }
-void calculatePolygonPoints(int angle,int pitch, lv_point_t *points) {
+void calculatePolygonPoints(int_least16_t angle,int16_t pitch, lv_point_t *points) {
   angle *= -1;
-  double radians = angle * M_PI / 180.0; // Conversione dell'angolo da gradi a radianti
-  double sinValue = tan(radians);
+  float radians = angle * M_PI / 180.0; // Conversione dell'angolo da gradi a radianti
+  float sinValue = tan(radians);
   // Calcolo le coordinate dei punti del poligono in base all'angolo
   points[0].x = 0;
   points[0].y = -pitch + horizonCanvasHalfHeight + int(horizonCanvasHalfWidth * sinValue);
@@ -480,7 +481,7 @@ void get_line_points(lv_point_t center, int16_t angle_degrees, int16_t distance,
 lv_obj_t *hdgObj;
 lv_obj_t *hdgUnitObj;
 lv_obj_t *hdgValueObj;
-int hdgValue = 245;
+int16_t hdgValue = 245;
 
 void createHDG(){
   hdgObj = lv_obj_create(canvas);
@@ -531,7 +532,7 @@ void createHDG(){
 lv_obj_t *qnhObj;
 lv_obj_t *qnhUnitObj;
 lv_obj_t *qnhValueObj;
-int qnhValue = 1013;
+int16_t qnhValue = 1013;
 void createQNH(){
   qnhObj = lv_obj_create(canvas);
   lv_obj_remove_style_all(qnhObj);
@@ -556,7 +557,7 @@ void createQNH(){
 lv_obj_t *iasObj;
 lv_obj_t *iasUnitObj;
 lv_obj_t *iasValueObj;
-int iasValue = 888;
+int16_t iasValue = 888;
 void createIAS(){
   iasObj = lv_obj_create(canvas);
   lv_obj_remove_style_all(iasObj);
@@ -750,26 +751,20 @@ void setup() {
   createCenterLine();
 }
 
-int step = 0;
-int roll = 5;
-int pitch = 0;
-int direction = 10;
+short int step = 0;
+short int roll = 5;
+short int pitch = 0;
+short int direction = 10;
 const int bottomLimit = -30;
 const int topLimit = 30;
-int lastmillis = 0;
-const int maxmillis = 5;
+short int lastmillis = 0;
+const int maxmillis = 33;
 const int second = 100;
 
 void loop() {
   const long actual = millis();
   const int deltaTime = actual-lastmillis;
-  // lastmillis = millis();
-  // const int fps = int(second/deltaTime);
-  // Serial.println(fps);
-  // put your main code here, to run repeatedly:
-  // lv_obj_set_pos(horizon,0,LCD_V_RES/2+top);
-  if(deltaTime>maxmillis){
-    // lv_obj_set_style_transform_angle(horizon,top,0);
+  if(deltaTime>maxmillis){;
     updateHorizon(roll,pitch);
     lastmillis = millis();
     switch (step){
@@ -844,7 +839,7 @@ void tft_init(void) {
   vTaskDelay(200 / portTICK_PERIOD_MS);
   xl.digitalWrite(LCD_RST_PIN, 1);
   vTaskDelay(200 / portTICK_PERIOD_MS);
-  int cmd = 0;
+  int8_t cmd = 0;
   while (st_init_cmds[cmd].databytes != 0xff) {
     lcd_cmd(st_init_cmds[cmd].cmd);
     lcd_data(st_init_cmds[cmd].data, st_init_cmds[cmd].databytes & 0x1F);
