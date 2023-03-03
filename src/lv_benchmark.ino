@@ -17,6 +17,14 @@ const lv_color_t MAGENTA = lv_color_hex(0xE700A2);
 const lv_color_t GREYTEXT = lv_color_hex(0x888888);
 const lv_color_t YELLOW = lv_color_hex(0xE7E600);
 const lv_color_t GREEN = lv_color_hex(0x00FF00);
+bool chipTarget = 1;
+
+
+short int roll = 5;
+short int pitch = 0;
+
+
+
 
 #define TOUCH_MODULE_CST820
 // #define TOUCH_MODULE_FT3267
@@ -214,11 +222,9 @@ void preSetup(){
 
   lv_init();
   // alloc draw buffers used by LVGL from PSRAM
-  lv_color_t *buf1 =
-      (lv_color_t *)heap_caps_malloc(LCD_H_RES * LCD_V_RES * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
+  lv_color_t *buf1 = (lv_color_t *)heap_caps_malloc(LCD_H_RES * LCD_V_RES * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
   assert(buf1);
-  lv_color_t *buf2 =
-      (lv_color_t *)heap_caps_malloc(LCD_H_RES * LCD_V_RES * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
+  lv_color_t *buf2 = (lv_color_t *)heap_caps_malloc(LCD_H_RES * LCD_V_RES * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
   assert(buf2);
   lv_disp_draw_buf_init(&disp_buf, buf1, buf2, LCD_H_RES * LCD_V_RES);
 
@@ -251,6 +257,7 @@ void createCanvas(){
 }
 
 
+lv_img_dsc_t *horizonCanvasDSC;
 const short int horizonCanvasHeight = 330;
 const short int horizonCanvasWidth = 280;
 const short int horizonCanvasHalfHeight = horizonCanvasHeight/2;
@@ -286,91 +293,83 @@ void createHorizon(){
   lv_draw_rect_dsc_init(&horizonDsc);
   horizonDsc.bg_color = updateHorizonC1;
   
-  calculatePolygonPoints(0,0,horizonPoints);
-  draw_polygon(horizonCanvas,horizonPoints,horizonPointsCount,updateHorizonC1);
+  calculatePolygonPoints();
+  horizonCanvasDSC = lv_canvas_get_img(horizonCanvas);
+  draw_polygon(updateHorizonC1);
 }
 
 const lv_point_t updateHorizonCenter = {horizonCanvasHalfWidth,horizonCanvasHalfHeight};
 const short int updateHorizonCenterSizes[11] = {250,30,50,30,100,30,50,30,100,30,50};
 lv_point_t updateHorizonStartPoint;
 lv_point_t updateHorizonEndPoint;
-void updateHorizon(int angle,int pitch){
-    calculatePolygonPoints(angle,pitch,horizonPoints);
+void updateHorizon(){
+    calculatePolygonPoints();
     lv_canvas_fill_bg(horizonCanvas, updateHorizonC0, LV_OPA_COVER);
-    draw_polygon(horizonCanvas,horizonPoints,horizonPointsCount,updateHorizonC1);
-    for(int8_t i=0;i<11;i++){
-      get_line_points(updateHorizonCenter,angle,pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
-      if(i%4==0){ 
-        draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
-      }else{
-        draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
-      }
-      get_line_points(updateHorizonCenter,angle+180,-pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
-      if(i>0 && i%4==0){ 
-        draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
-      }else{
-        draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
-      }
-    }
+    draw_polygon(updateHorizonC1);
+    // for(int8_t i=0;i<11;i++){
+    //   get_line_points(updateHorizonCenter,angle,pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
+    //   if(i%4==0){ 
+    //     draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+    //   }else{
+    //     draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+    //   }
+    //   get_line_points(updateHorizonCenter,angle+180,-pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
+    //   if(i>0 && i%4==0){ 
+    //     draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+    //   }else{
+    //     draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+    //   }
+    // }
 }
-void draw_polygon(lv_obj_t *canvas, lv_point_t points[], uint16_t point_count, lv_color_t color) {
-  LV_ASSERT_OBJ(canvas, MY_CLASS);
-  lv_img_dsc_t *dsc = lv_canvas_get_img(canvas);
-
-  // Find the bounding box of th
-  uint16_t canvas_width = dsc->header.w;
-  uint16_t canvas_height = dsc->header.h;
-
-  // Find the bounding box of the polygon
-  int16_t min_x = canvas_width;
-  int16_t min_y = canvas_height;
-  int16_t max_x = 0;
-  int16_t max_y = 0;
-  for (uint16_t i = 0; i < point_count; i++) {
-    if (points[i].x < min_x) {
-      min_x = points[i].x;
+int16_t draw_polygon_min_x = horizonCanvasWidth;
+int16_t draw_polygon_min_y = horizonCanvasHeight;
+int16_t draw_polygon_max_x = 0;
+int16_t draw_polygon_max_y = 0;
+void draw_polygon(lv_color_t color) {
+  int8_t i = 0; 
+  while (i < 4) {
+    if (horizonPoints[i].x < draw_polygon_min_x) {
+      draw_polygon_min_x = horizonPoints[i].x;
     }
-    if (points[i].x > max_x) {
-      max_x = points[i].x;
+    if (horizonPoints[i].x > draw_polygon_max_x) {
+      draw_polygon_max_x = horizonPoints[i].x;
     }
-    if (points[i].y < min_y) {
-      min_y = points[i].y;
+    if (horizonPoints[i].y < draw_polygon_min_y) {
+      draw_polygon_min_y = horizonPoints[i].y;
     }
-    if (points[i].y > max_y) {
-      max_y = points[i].y;
+    if (horizonPoints[i].y > draw_polygon_max_y) {
+      draw_polygon_max_y = horizonPoints[i].y;
     }
+    i++;
   }
-
-  // Iterate over every pixel in the bounding box and check if it's inside the polygon
-  for (int16_t x = min_x; x <= max_x; x++) {
-    for (int16_t y = min_y; y <= max_y; y++) {
+  for (int16_t x = draw_polygon_min_x; x <= draw_polygon_max_x; x++) {
+    for (int16_t y = draw_polygon_min_y; y <= draw_polygon_max_y; y++) {
       int16_t i, j;
       bool inside = false;
-      for (i = 0, j = point_count - 1; i < point_count; j = i++) {
-        if (((points[i].y >= y) != (points[j].y >= y)) &&
-            (x < (points[j].x - points[i].x) * (y - points[i].y) / (points[j].y - points[i].y) + points[i].x)) {
+      for (i = 0, j = 3; i < 4; j = i++) {
+        if (((horizonPoints[i].y >= y) != (horizonPoints[j].y >= y)) &&
+            (x < (horizonPoints[j].x - horizonPoints[i].x) * (y - horizonPoints[i].y) / (horizonPoints[j].y - horizonPoints[i].y) + horizonPoints[i].x)) {
           inside = !inside;
         }
       }
       if (inside) {
-        lv_img_buf_set_px_color(dsc, x, y, color);
+        lv_img_buf_set_px_color(horizonCanvasDSC, x, y, color);
       }
     }
   }
 }
-void calculatePolygonPoints(int_least16_t angle,int16_t pitch, lv_point_t *points) {
-  angle *= -1;
-  float radians = angle * M_PI / 180.0; // Conversione dell'angolo da gradi a radianti
-  float sinValue = tan(radians);
+const float radianCoef = M_PI / 180.0;
+void calculatePolygonPoints() {
+  const float tanValue = tan(-roll * radianCoef);
   // Calcolo le coordinate dei punti del poligono in base all'angolo
-  points[0].x = 0;
-  points[0].y = -pitch + horizonCanvasHalfHeight + int(horizonCanvasHalfWidth * sinValue);
-  points[1].x = horizonCanvasWidth;
-  points[1].y = -pitch + horizonCanvasHalfHeight - int(horizonCanvasHalfWidth * sinValue);
-  points[2].x = horizonCanvasWidth;
-  points[2].y = horizonCanvasHeight;
-  points[3].x = 0;
-  points[3].y = horizonCanvasHeight;
+  horizonPoints[0].x = 0;
+  horizonPoints[0].y = -pitch + horizonCanvasHalfHeight + int(horizonCanvasHalfWidth * tanValue);
+  horizonPoints[1].x = horizonCanvasWidth;
+  horizonPoints[1].y = -pitch + horizonCanvasHalfHeight - int(horizonCanvasHalfWidth * tanValue);
+  horizonPoints[2].x = horizonCanvasWidth;
+  horizonPoints[2].y = horizonCanvasHeight;
+  horizonPoints[3].x = 0;
+  horizonPoints[3].y = horizonCanvasHeight;
 }
 void draw_line(lv_obj_t *canvas, lv_point_t point_a, lv_point_t point_b, lv_color_t color) {
   LV_ASSERT_OBJ(canvas, MY_CLASS);
@@ -453,7 +452,7 @@ void draw_line_one(lv_obj_t *canvas, lv_point_t point_a, lv_point_t point_b, lv_
 void get_line_points(lv_point_t center, int16_t angle_degrees, int16_t distance, int16_t width, lv_point_t *start_point, lv_point_t *end_point) {
   lv_point_t centerPoint;
   if(distance!=0){
-    const float centerTeta = (angle_degrees-90) * M_PI / 180.0;
+    const float centerTeta = (angle_degrees-90) * radianCoef;
     const float centerXPolar = distance * cos(centerTeta);
     const float centerYPolar = distance * sin(centerTeta);
     const float centerXCartesian = centerXPolar * cos(0) - centerYPolar * sin(0);
@@ -752,20 +751,22 @@ void setup() {
 }
 
 short int step = 0;
-short int roll = 5;
-short int pitch = 0;
 short int direction = 10;
 const int bottomLimit = -30;
 const int topLimit = 30;
 short int lastmillis = 0;
 const int maxmillis = 33;
 const int second = 100;
+TaskHandle_t Task1;
 
 void loop() {
+  if(chipTarget) doLoop();
+}
+void doLoop(){
   const long actual = millis();
   const int deltaTime = actual-lastmillis;
-  if(deltaTime>maxmillis){;
-    updateHorizon(roll,pitch);
+  if(deltaTime>maxmillis){
+    updateHorizon();
     lastmillis = millis();
     switch (step){
       case 0:
@@ -785,10 +786,11 @@ void loop() {
         if(pitch < -30) step=0;
         break;
     };
+  }else{
+    lv_timer_handler();
   }
-  lv_timer_handler();
+  // chipTarget = !chipTarget;
 }
-
 void lcd_send_data(uint8_t data) {
   uint8_t n;
   for (n = 0; n < 8; n++) {
