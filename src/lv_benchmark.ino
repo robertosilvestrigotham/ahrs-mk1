@@ -4,7 +4,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_rgb.h"
 #include "esp_lcd_panel_vendor.h"
-#include "lvgl.h"
+#include <lvgl.h>
 #include "pin_config.h"
 #include <Arduino.h>
 
@@ -306,20 +306,20 @@ void updateHorizon(){
     calculatePolygonPoints();
     lv_canvas_fill_bg(horizonCanvas, updateHorizonC0, LV_OPA_COVER);
     draw_polygon(updateHorizonC1);
-    // for(int8_t i=0;i<11;i++){
-    //   get_line_points(updateHorizonCenter,angle,pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
-    //   if(i%4==0){ 
-    //     draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
-    //   }else{
-    //     draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
-    //   }
-    //   get_line_points(updateHorizonCenter,angle+180,-pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
-    //   if(i>0 && i%4==0){ 
-    //     draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
-    //   }else{
-    //     draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
-    //   }
-    // }
+    for(int8_t i=0;i<11;i++){
+      get_line_points(updateHorizonCenter,roll,pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
+      if(i%4==0){ 
+        draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+      }else{
+        draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+      }
+      get_line_points(updateHorizonCenter,roll+180,-pitch + 12*i,updateHorizonCenterSizes[i],&updateHorizonStartPoint,&updateHorizonEndPoint);
+      if(i>0 && i%4==0){ 
+        draw_line(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+      }else{
+        draw_line_one(horizonCanvas,updateHorizonStartPoint,updateHorizonEndPoint,updateHorizonC2);
+      }
+    }
 }
 int16_t draw_polygon_min_x = horizonCanvasWidth;
 int16_t draw_polygon_min_y = horizonCanvasHeight;
